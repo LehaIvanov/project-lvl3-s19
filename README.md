@@ -29,9 +29,11 @@ page-loader --help
 ```
 
 ```
-import pageLoader from 'page-loader';
+import pageLoader from 'page-loader-lvl3-s19-ai';
 
-pageLoader('https://www.google.com/', '/var/tmp');
+pageLoader('https://www.google.com/', '/var/tmp').then((result) => {
+  console.log(result);
+});
 ```
 
 The default download location is './'.
