@@ -30,7 +30,8 @@
     "eslint-plugin-import": "*",
     "babel-eslint": "*",
     "jest": "*",
-    "nock": "*"
+    "nock": "*",
+    "node-uuid": "*"
   },
   "dependencies": {
     "commander": "*",
