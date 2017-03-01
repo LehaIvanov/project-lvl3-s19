@@ -1,6 +1,4 @@
 import nock from 'nock';
-import axios from 'axios';
-import httpAdapter from 'axios/lib/adapters/http';
 import os from 'os';
 import fs from 'mz/fs';
 import path from 'path';
@@ -13,8 +11,6 @@ const getTmpDir = async () => {
   return result;
 };
 
-axios.defaults.adapter = httpAdapter;
-
 describe('test page-loader', () => {
   beforeEach(() => {
     nock('http://www.google.com')
@@ -24,7 +20,7 @@ describe('test page-loader', () => {
       .reply(404);
   });
 
-  test('uploaded successfully', async (done) => {
+  test('uploaded successfully', async () => {
     const filename = 'www-google-com.html';
     const content = 'Hello from Google!';
 
@@ -34,10 +30,9 @@ describe('test page-loader', () => {
 
     expect(expectedContent).toBe(content);
     expect(result).toBe('Page uploaded successfully');
-    done();
   });
 
-  test('404 Not Found', async (done) => {
+  test('404 Not Found', async () => {
     const tmpdir = await getTmpDir();
 
     const result = await pageLoader('http://www.google.com/wrong', tmpdir);
@@ -45,13 +40,11 @@ describe('test page-loader', () => {
 
     expect(result).toBe('Request failed with status code 404');
     expect(files.length).toBe(0);
-    done();
   });
 
-  test('output directory does not exist', async (done) => {
+  test('output directory does not exist', async () => {
     const nonExistentDir = path.join(os.tmpdir(), uuidV1());
     const result = await pageLoader('http://www.google.com', nonExistentDir);
     expect(result).toBe(`No such directory '${nonExistentDir}'`);
-    done();
   });
 });

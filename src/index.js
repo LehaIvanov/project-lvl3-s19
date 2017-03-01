@@ -1,7 +1,7 @@
-import axios from 'axios';
 import fs from 'mz/fs';
 import url from 'url';
 import path from 'path';
+import axios from './lib/axios';
 
 const successMsg = 'Page uploaded successfully';
 
