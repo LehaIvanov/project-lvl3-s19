@@ -4,7 +4,7 @@ import httpAdapter from 'axios/lib/adapters/http';
 import os from 'os';
 import fs from 'mz/fs';
 import path from 'path';
-import uuid from 'node-uuid';
+import uuidV1 from 'uuid/v1';
 import pageLoader from '../src/';
 
 const testDirPrefix = 'page-loader-test-';
@@ -49,7 +49,7 @@ describe('test page-loader', () => {
   });
 
   test('output directory does not exist', async (done) => {
-    const nonExistentDir = path.join(os.tmpdir(), uuid.v1());
+    const nonExistentDir = path.join(os.tmpdir(), uuidV1());
     const result = await pageLoader('http://www.google.com', nonExistentDir);
     expect(result).toBe(`No such directory '${nonExistentDir}'`);
     done();

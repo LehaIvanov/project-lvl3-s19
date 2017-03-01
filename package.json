@@ -1,8 +1,8 @@
 {
   "name": "page-loader-lvl3-s19-ai",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "jest",
     "babel-node": "babel-node",
@@ -31,7 +31,7 @@
     "babel-eslint": "*",
     "jest": "*",
     "nock": "*",
-    "node-uuid": "*"
+    "uuid": "*"
   },
   "dependencies": {
     "commander": "*",
