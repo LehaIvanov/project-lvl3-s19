@@ -40,5 +40,11 @@
   },
   "bin": {
     "page-loader": "dist/bin/page-loader.js"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/__tests__/fixtures/"
+    ]
   }
 }

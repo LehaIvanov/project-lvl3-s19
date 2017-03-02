@@ -6,6 +6,7 @@ import uuidV1 from 'uuid/v1';
 import pageLoader from '../src/';
 
 const testDirPrefix = 'page-loader-test-';
+const fixturesPrefix = './__tests__/fixtures';
 const getTmpDir = async () => {
   const result = await fs.mkdtemp(path.join(os.tmpdir(), testDirPrefix));
   return result;
@@ -15,15 +16,15 @@ describe('test page-loader', () => {
   beforeEach(() => {
     nock('http://www.google.com')
       .get('/')
-      .reply(200, 'Hello from Google!')
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'index.html')))
       .get('/wrong')
       .reply(404);
   });
 
   test('uploaded successfully', async () => {
     const filename = 'www-google-com.html';
-    const content = 'Hello from Google!';
 
+    const content = await fs.readFile(path.resolve(fixturesPrefix, 'index.html'), 'utf8');
     const tmpdir = await getTmpDir();
     const result = await pageLoader('http://www.google.com', tmpdir);
     const expectedContent = await fs.readFile(path.join(tmpdir, filename), 'utf8');
