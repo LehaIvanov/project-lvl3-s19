@@ -1,6 +1,6 @@
 {
   "name": "page-loader-lvl3-s19-ai",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -36,7 +36,8 @@
   "dependencies": {
     "commander": "*",
     "axios": "*",
-    "mz": "*"
+    "mz": "*",
+    "cheerio": "*"
   },
   "bin": {
     "page-loader": "dist/bin/page-loader.js"

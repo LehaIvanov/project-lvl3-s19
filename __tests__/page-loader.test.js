@@ -18,19 +18,52 @@ describe('test page-loader', () => {
       .get('/')
       .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'index.html')))
       .get('/wrong')
+      .reply(404)
+      .get('/images/favicon.ico')
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'favicon.ico')))
+      .get('/css/app.css')
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.css')))
+      .get('/js/app.js')
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.js')))
+      .get('/css/vendor.css')
       .reply(404);
+    nock('https://cdn2.hexlet.io')
+      .get('/assets/application.css')
+      .reply(200, () =>
+        fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'hexlet-application.css')));
   });
 
   test('uploaded successfully', async () => {
-    const filename = 'www-google-com.html';
+    const expectFile = async (expectedFilePath, originalFilePath) => {
+      const expectContent = await fs.readFile(expectedFilePath, 'utf8');
+      const originalContent = await fs.readFile(originalFilePath, 'utf8');
+      expect(expectContent).toBe(originalContent);
+    };
 
-    const content = await fs.readFile(path.resolve(fixturesPrefix, 'index.html'), 'utf8');
     const tmpdir = await getTmpDir();
-    const result = await pageLoader('http://www.google.com', tmpdir);
-    const expectedContent = await fs.readFile(path.join(tmpdir, filename), 'utf8');
+    const dirWithFiles = path.resolve(tmpdir, 'www-google-com_files');
+    const files = [
+      ['images-favicon.ico', 'favicon.ico'],
+      ['css-app.css', 'app.css'],
+      ['js-app.js', 'app.js'],
+      ['cdn2-hexlet-io-assets-application.css', 'hexlet-application.css'],
+    ];
 
-    expect(expectedContent).toBe(content);
+    const result = await pageLoader('http://www.google.com', tmpdir);
     expect(result).toBe('Page uploaded successfully');
+
+    await Promise.all(files.map((pair) => {
+      const [expectedFile, correctFile] = pair;
+      const expectedFilePath = path.resolve(dirWithFiles, expectedFile);
+      const originalFilePath = path.resolve(fixturesPrefix, 'files', correctFile);
+      return expectFile(expectedFilePath, originalFilePath);
+    }));
+
+    await expectFile(path.resolve(tmpdir, 'www-google-com.html'),
+      path.resolve(fixturesPrefix, 'index-correct.html'));
+    const filesNameList = await fs.readdir(dirWithFiles);
+
+    expect(filesNameList.length).toBe(4);
   });
 
   test('404 Not Found', async () => {
