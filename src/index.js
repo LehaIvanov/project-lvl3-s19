@@ -31,7 +31,7 @@ const loadResource = async (src, mainPageUrl, downloadLocation) => {
   const urlForResource = urlObj.host === null ? url.resolve(mainPageUrl, src) : url.format(urlObj);
   const filePath = path.resolve(downloadLocation, fileName);
   const res = await axios.get(urlForResource);
-  await fs.writeFile(filePath, res.data);
+  await fs.writeFile(filePath, res.data, 'utf8');
 };
 
 const loadAllResources = (resources, mainPageUrl, downloadLocation) =>
@@ -79,7 +79,7 @@ const pageLoader = async (address, downloadLocation) => {
       $(this).attr('src', path.join(dirNameForResources, getResourceFileName(src)));
     }
   });
-  await fs.writeFile(mainPagePath, $.html());
+  await fs.writeFile(mainPagePath, $.html(), 'utf8');
 
   return successMsg;
 };
