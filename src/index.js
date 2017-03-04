@@ -14,6 +14,9 @@ const getNameByAddress = (address) => {
   const urlObj = url.parse(address, true);
 
   if (urlObj.host === null) {
+    if (urlObj.path.charAt(0) === '/') {
+      return escape(urlObj.path.slice(1));
+    }
     return escape(urlObj.path);
   }
 
