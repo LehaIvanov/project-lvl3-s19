@@ -4,6 +4,7 @@ import path from 'path';
 import cheerio from 'cheerio';
 import os from 'os';
 import axios from './lib/axios';
+import genErrorDescription from './gen-error-description';
 
 const successMsg = 'Page uploaded successfully';
 const tmpdirPrefix = 'page-loader-';
@@ -96,12 +97,12 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
   await fs.writeFile(tmpPagePath, $.html(), 'utf8');
 };
 
-const checkPathValid = async (inspectedPath) => {
-  await fs.stat(inspectedPath);
+const checkDirectoryPathValid = async (inspectedDirectoryPath) => {
+  await fs.stat(inspectedDirectoryPath);
 };
 
 const pageLoader = async (address, downloadLocation) => {
-  await checkPathValid(downloadLocation);
+  await checkDirectoryPathValid(downloadLocation);
 
   const dirNameForResources = `${getNameByAddress(address)}_files`;
   const fileNameForPage = `${getNameByAddress(address)}.html`;
@@ -124,9 +125,8 @@ export default async (pageUrl, output = './') => {
   try {
     return await pageLoader(pageUrl, output);
   } catch (err) {
-    if (err.message.startsWith('ENOENT')) {
-      return Promise.reject(new Error(`No such directory '${path.resolve(output)}'`));
-    }
+    const desciption = genErrorDescription(err);
+    err.message = desciption;
     return Promise.reject(err);
   }
 };

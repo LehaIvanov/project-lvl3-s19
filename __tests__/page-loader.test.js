@@ -24,7 +24,12 @@ describe('test page-loader', () => {
       .get('/css/app.css')
       .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.css')))
       .get('/js/app.js')
-      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.js')));
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.js')))
+      .get('/mail/all')
+      .reply(200, () =>
+        fs.createReadStream(path.resolve(fixturesPrefix, 'index-bad-resource.html')))
+      .get('/css/vendor.css')
+      .reply(404);
     nock('https://cdn2.hexlet.io')
       .get('/assets/application.css')
       .reply(200, () =>
@@ -64,14 +69,28 @@ describe('test page-loader', () => {
     expect(filesNameList.length).toBe(4);
   });
 
-  test('404 Not Found', async () => {
+  test('404 not found', async () => {
     const tmpdir = await getTmpDir();
     const files = await fs.readdir(tmpdir);
 
     try {
       await pageLoader('http://www.google.com/wrong', tmpdir);
     } catch (err) {
-      expect(err.message).toBe('Request failed with status code 404');
+      expect(err.message).toBe('Request failed with status code 404 [http://www.google.com/wrong]');
+      expect(files.length).toBe(0);
+    }
+  });
+
+  test('404 resource \'/css/vendor.css\' not found', async () => {
+    const tmpdir = await getTmpDir();
+    const files = await fs.readdir(tmpdir);
+
+    try {
+      await pageLoader('http://www.google.com/mail/all', tmpdir);
+    } catch (err) {
+      const correctMsg = 'Request failed with status code 404 '
+        + '[http://www.google.com/css/vendor.css]';
+      expect(err.message).toBe(correctMsg);
       expect(files.length).toBe(0);
     }
   });
@@ -82,7 +101,7 @@ describe('test page-loader', () => {
     try {
       await pageLoader('http://www.google.com', nonExistentDir);
     } catch (err) {
-      expect(err.message).toBe(`No such directory '${nonExistentDir}'`);
+      expect(err.message).toBe(`No such file or directory [${nonExistentDir}]`);
     }
   });
 });

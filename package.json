@@ -37,7 +37,8 @@
     "commander": "*",
     "axios": "*",
     "mz": "*",
-    "cheerio": "*"
+    "cheerio": "*",
+    "errno": "*"
   },
   "bin": {
     "page-loader": "dist/bin/page-loader.js"
