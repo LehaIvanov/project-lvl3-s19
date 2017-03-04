@@ -24,9 +24,7 @@ describe('test page-loader', () => {
       .get('/css/app.css')
       .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.css')))
       .get('/js/app.js')
-      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.js')))
-      .get('/css/vendor.css')
-      .reply(404);
+      .reply(200, () => fs.createReadStream(path.resolve(fixturesPrefix, 'files', 'app.js')));
     nock('https://cdn2.hexlet.io')
       .get('/assets/application.css')
       .reply(200, () =>
@@ -68,17 +66,23 @@ describe('test page-loader', () => {
 
   test('404 Not Found', async () => {
     const tmpdir = await getTmpDir();
-
-    const result = await pageLoader('http://www.google.com/wrong', tmpdir);
     const files = await fs.readdir(tmpdir);
 
-    expect(result).toBe('Request failed with status code 404');
-    expect(files.length).toBe(0);
+    try {
+      await pageLoader('http://www.google.com/wrong', tmpdir);
+    } catch (err) {
+      expect(err.message).toBe('Request failed with status code 404');
+      expect(files.length).toBe(0);
+    }
   });
 
   test('output directory does not exist', async () => {
     const nonExistentDir = path.join(os.tmpdir(), uuidV1());
-    const result = await pageLoader('http://www.google.com', nonExistentDir);
-    expect(result).toBe(`No such directory '${nonExistentDir}'`);
+
+    try {
+      await pageLoader('http://www.google.com', nonExistentDir);
+    } catch (err) {
+      expect(err.message).toBe(`No such directory '${nonExistentDir}'`);
+    }
   });
 });

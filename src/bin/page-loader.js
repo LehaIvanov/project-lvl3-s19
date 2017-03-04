@@ -10,7 +10,11 @@ commander
   .description('Loads the page by url.')
   .option('-o, --output [directory]', 'Location where you want to save the file')
   .action(async (url, options) => {
-    const result = await run(url, options.output);
-    console.log(result);
+    try {
+      const result = await run(url, options.output);
+      console.log(result);
+    } catch (err) {
+      console.error(err.message);
+    }
   })
   .parse(process.argv);

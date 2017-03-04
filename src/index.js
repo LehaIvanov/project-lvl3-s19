@@ -34,28 +34,24 @@ const loadResource = async (src, mainPageUrl, downloadLocation) => {
   await fs.writeFile(filePath, res.data, 'utf8');
 };
 
-const loadAllResources = (resources, mainPageUrl, downloadLocation) =>
-  new Promise((resolve) => {
-    let completed = 0;
-    const done = () => {
-      completed += 1;
-      if (completed === resources.length) {
-        resolve();
-      }
-    };
-
-    resources.forEach(s => loadResource(s, mainPageUrl, downloadLocation).then(done).catch(done));
-  });
+const getLocationAttrbute = (elem) => {
+  switch (elem.prop('tagName')) {
+    case 'LINK': {
+      return 'href';
+    }
+    default: {
+      return 'src';
+    }
+  }
+};
 
 const getResourcesFromPage = (html) => {
   const $ = cheerio.load(html);
 
   return $('link[href], script[src]')
     .map(function getSrc() {
-      if ($(this).is('link')) {
-        return $(this).attr('href');
-      }
-      return $(this).attr('src');
+      const attr = getLocationAttrbute($(this));
+      return $(this).attr(attr);
     })
     .toArray();
 };
@@ -66,18 +62,14 @@ const pageLoader = async (address, downloadLocation) => {
   const dirNameForResources = `${getNameByAddress(address)}_files`;
   const pathForResources = path.resolve(downloadLocation, dirNameForResources);
   await fs.mkdir(pathForResources);
-  await loadAllResources(resources, address, pathForResources);
+  await Promise.all(resources.map(src => loadResource(src, address, pathForResources)));
 
   const mainPagePath = path.resolve(downloadLocation, `${getNameByAddress(address)}.html`);
   const $ = cheerio.load(resMainPage.data);
   $('link[href], script[src]').each(function replaceSrc() {
-    if ($(this).is('link')) {
-      const href = $(this).attr('href');
-      $(this).attr('href', path.join(dirNameForResources, getResourceFileName(href)));
-    } else {
-      const src = $(this).attr('src');
-      $(this).attr('src', path.join(dirNameForResources, getResourceFileName(src)));
-    }
+    const attr = getLocationAttrbute($(this));
+    const src = $(this).attr(attr);
+    $(this).attr(attr, path.join(dirNameForResources, getResourceFileName(src)));
   });
   await fs.writeFile(mainPagePath, $.html(), 'utf8');
 
@@ -89,8 +81,8 @@ export default async (pageUrl, output = './') => {
     return await pageLoader(pageUrl, output);
   } catch (err) {
     if (err.message.startsWith('ENOENT')) {
-      return `No such directory '${path.resolve(output)}'`;
+      return Promise.reject(new Error(`No such directory '${path.resolve(output)}'`));
     }
-    return err.message;
+    return Promise.reject(err);
   }
 };
