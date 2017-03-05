@@ -3,6 +3,7 @@ import url from 'url';
 import path from 'path';
 import cheerio from 'cheerio';
 import os from 'os';
+import Multispinner from 'multispinner';
 import axios from './lib/axios';
 import genErrorDescription from './gen-error-description';
 
@@ -31,12 +32,16 @@ const getResourceFileName = (src) => {
   return fileName;
 };
 
-const loadResource = async (src, pageUrl, downloadLocation) => {
-  const fileName = getResourceFileName(src);
+const getResourceUrl = (src, pageUrl) => {
   const urlObj = url.parse(src, true);
   const urlForResource = urlObj.host === null ? url.resolve(pageUrl, src) : url.format(urlObj);
+  return urlForResource;
+};
+
+const loadResource = async (resourceSrc, resourceUrl, pageUrl, downloadLocation) => {
+  const fileName = getResourceFileName(resourceSrc);
   const filePath = path.resolve(downloadLocation, fileName);
-  const res = await axios.get(urlForResource);
+  const res = await axios.get(resourceUrl);
   await fs.writeFile(filePath, res.data, 'utf8');
 };
 
@@ -51,15 +56,16 @@ const getLocationAttrbute = (elem) => {
   }
 };
 
-const getResourcesFromPage = (html) => {
+const getResourceMapFromPage = (html, pageUrl) => {
   const $ = cheerio.load(html);
-
-  return $('link[href], script[src]')
-    .map(function getSrc() {
-      const attr = getLocationAttrbute($(this));
-      return $(this).attr(attr);
-    })
-    .toArray();
+  let resourceArray = [];
+  $('link[href], script[src]').each(function getSrc() {
+    const attr = getLocationAttrbute($(this));
+    const src = $(this).attr(attr);
+    resourceArray = [...resourceArray, [src, getResourceUrl(src, pageUrl)]];
+  });
+  const resourceMap = new Map(resourceArray);
+  return resourceMap;
 };
 
 const copyFile = (source, target) => new Promise((resolve, reject) => {
@@ -87,9 +93,20 @@ const getCopyResourcesPromises = (resourceTmpFiles, tmpResourcesPath, resourcesP
 const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameForResources) => {
   const res = await axios.get(address);
   const html = res.data;
-  const resources = getResourcesFromPage(html);
+  const resourceMap = getResourceMapFromPage(html, address);
   await fs.mkdir(tmpResourcesPath);
-  await Promise.all(resources.map(src => loadResource(src, address, tmpResourcesPath)));
+  const resourceUrlList = Array.from(resourceMap.values());
+  const spinners = new Multispinner(resourceUrlList, {
+    preText: 'Downloading',
+  });
+
+  await Promise.all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
+    loadResource(resourceSrc, resourceUrl, address, tmpResourcesPath)
+      .then(() => spinners.success(resourceUrl))
+      .catch((err) => {
+        spinners.error(resourceUrl);
+        return Promise.reject(err);
+      })));
 
   const $ = cheerio.load(html);
   $('link[href], script[src]').each(function replaceSrc() {
@@ -101,7 +118,7 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
 };
 
 const checkDirectoryPathValid = async (inspectedDirectoryPath) => {
-  await fs.stat(inspectedDirectoryPath);
+  await fs.readdir(inspectedDirectoryPath);
 };
 
 const pageLoader = async (address, downloadLocation) => {

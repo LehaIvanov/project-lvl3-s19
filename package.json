@@ -38,7 +38,9 @@
     "axios": "*",
     "mz": "*",
     "cheerio": "*",
-    "errno": "*"
+    "errno": "*",
+    "multispinner": "*",
+    "lodash": "*"
   },
   "bin": {
     "page-loader": "dist/bin/page-loader.js"
