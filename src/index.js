@@ -9,6 +9,7 @@ import genErrorDescription from './gen-error-description';
 
 const successMsg = 'Page uploaded successfully';
 const tmpdirPrefix = 'page-loader-';
+const spinnerInterval = 80;
 
 const getNameByAddress = (address) => {
   const escape = str => str.replace(/\W+/g, '-');
@@ -90,6 +91,17 @@ const getCopyResourcesPromises = (resourceTmpFiles, tmpResourcesPath, resourcesP
   resourceTmpFiles.map(file =>
     copyFile(path.resolve(tmpResourcesPath, file), path.resolve(resourcesPath, file)));
 
+const checkLoadResourceResult = loadResourceResult => new Promise((resolve, reject) => {
+  setTimeout(() => {
+    const loadResourceError = loadResourceResult.filter(r => r[0] !== null)[0];
+    if (loadResourceError) {
+      reject(loadResourceError[0]);
+    } else {
+      resolve();
+    }
+  }, spinnerInterval);
+});
+
 const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameForResources) => {
   const res = await axios.get(address);
   const html = res.data;
@@ -97,16 +109,21 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
   await fs.mkdir(tmpResourcesPath);
   const resourceUrlList = Array.from(resourceMap.values());
   const spinners = new Multispinner(resourceUrlList, {
-    preText: 'Downloading',
+    interval: spinnerInterval,
   });
 
-  await Promise.all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
-    loadResource(resourceSrc, resourceUrl, address, tmpResourcesPath)
-      .then(() => spinners.success(resourceUrl))
-      .catch((err) => {
-        spinners.error(resourceUrl);
-        return Promise.reject(err);
-      })));
+  const loadResourceResult = await Promise
+    .all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
+      loadResource(resourceSrc, resourceUrl, address, tmpResourcesPath)
+        .then((resResourse) => {
+          spinners.success(resourceUrl);
+          return Promise.resolve([null, resResourse]);
+        })
+        .catch((err) => {
+          spinners.error(resourceUrl);
+          return Promise.resolve([err, null]);
+        })));
+  await checkLoadResourceResult(loadResourceResult);
 
   const $ = cheerio.load(html);
   $('link[href], script[src]').each(function replaceSrc() {
@@ -133,6 +150,7 @@ const pageLoader = async (address, downloadLocation) => {
   const pagePath = path.resolve(downloadLocation, fileNameForPage);
 
   await loadPageToTmpDir(address, tmpPagePath, tmpResourcesPath, dirNameForResources);
+
   const resourceTmpFiles = await fs.readdir(tmpResourcesPath);
   await fs.mkdir(resourcesPath);
   await Promise.all([...getCopyResourcesPromises(resourceTmpFiles, tmpResourcesPath, resourcesPath),
