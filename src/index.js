@@ -4,6 +4,7 @@ import path from 'path';
 import cheerio from 'cheerio';
 import os from 'os';
 import Multispinner from 'multispinner';
+import _ from 'lodash';
 import axios from './lib/axios';
 import genErrorDescription from './gen-error-description';
 
@@ -91,11 +92,17 @@ const getCopyResourcesPromises = (resourceTmpFiles, tmpResourcesPath, resourcesP
   resourceTmpFiles.map(file =>
     copyFile(path.resolve(tmpResourcesPath, file), path.resolve(resourcesPath, file)));
 
-const checkLoadResourceResult = loadResourceResult => new Promise((resolve, reject) => {
+const checkLoadResourceResults = loadResourceResults => new Promise((resolve, reject) => {
+  const isContainError = result => result[0] !== null;
+  const getFirstError = (results) => {
+    const resultWithError = _.find(results, r => isContainError(r));
+    return resultWithError ? resultWithError[0] : null;
+  };
+  const loadResourceFirstError = getFirstError(loadResourceResults);
+
   setTimeout(() => {
-    const loadResourceError = loadResourceResult.filter(r => r[0] !== null)[0];
-    if (loadResourceError) {
-      reject(loadResourceError[0]);
+    if (loadResourceFirstError) {
+      reject(loadResourceFirstError);
     } else {
       resolve();
     }
@@ -112,7 +119,7 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
     interval: spinnerInterval,
   });
 
-  const loadResourceResult = await Promise
+  const loadResourceResults = await Promise
     .all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
       loadResource(resourceSrc, resourceUrl, address, tmpResourcesPath)
         .then((resResourse) => {
@@ -123,7 +130,7 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
           spinners.error(resourceUrl);
           return Promise.resolve([err, null]);
         })));
-  await checkLoadResourceResult(loadResourceResult);
+  await checkLoadResourceResults(loadResourceResults);
 
   const $ = cheerio.load(html);
   $('link[href], script[src]').each(function replaceSrc() {
