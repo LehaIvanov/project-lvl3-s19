@@ -4,7 +4,6 @@ import path from 'path';
 import cheerio from 'cheerio';
 import os from 'os';
 import Multispinner from 'multispinner';
-import _ from 'lodash';
 import axios from './lib/axios';
 import genErrorDescription from './gen-error-description';
 
@@ -92,22 +91,8 @@ const getCopyResourcesPromises = (resourceTmpFiles, tmpResourcesPath, resourcesP
   resourceTmpFiles.map(file =>
     copyFile(path.resolve(tmpResourcesPath, file), path.resolve(resourcesPath, file)));
 
-const checkLoadResourceResults = loadResourceResults => new Promise((resolve, reject) => {
-  const isContainError = result => result[0] !== null;
-  const getFirstError = (results) => {
-    const resultWithError = _.find(results, r => isContainError(r));
-    return resultWithError ? resultWithError[0] : null;
-  };
-  const loadResourceFirstError = getFirstError(loadResourceResults);
-
-  setTimeout(() => {
-    if (loadResourceFirstError) {
-      reject(loadResourceFirstError);
-    } else {
-      resolve();
-    }
-  }, spinnerInterval);
-});
+const waitSpinnersAnimation = () =>
+  new Promise(resolve => setTimeout(() => resolve(), spinnerInterval));
 
 const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameForResources) => {
   const res = await axios.get(address);
@@ -119,18 +104,21 @@ const loadPageToTmpDir = async (address, tmpPagePath, tmpResourcesPath, dirNameF
     interval: spinnerInterval,
   });
 
-  const loadResourceResults = await Promise
-    .all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
+  try {
+    await Promise.all(Array.from(resourceMap.entries()).map(([resourceSrc, resourceUrl]) =>
       loadResource(resourceSrc, resourceUrl, address, tmpResourcesPath)
-        .then((resResourse) => {
-          spinners.success(resourceUrl);
-          return Promise.resolve([null, resResourse]);
-        })
-        .catch((err) => {
-          spinners.error(resourceUrl);
-          return Promise.resolve([err, null]);
-        })));
-  await checkLoadResourceResults(loadResourceResults);
+        .then(() => spinners.success(resourceUrl))));
+  } catch (err) {
+    Object.keys(spinners.spinners).forEach((key) => {
+      const spin = spinners.spinners[key];
+      if (spin.state === 'incomplete') {
+        spinners.error(key);
+      }
+    });
+    throw err;
+  } finally {
+    await waitSpinnersAnimation();
+  }
 
   const $ = cheerio.load(html);
   $('link[href], script[src]').each(function replaceSrc() {
