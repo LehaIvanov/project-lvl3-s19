@@ -1,4 +1,4 @@
-# project-lvl3-s19
+# Hexlet project project-lvl3-s19
 
 [![Build Status](https://travis-ci.org/LehaIvanov/project-lvl3-s19.svg?branch=master)](https://travis-ci.org/LehaIvanov/project-lvl3-s19)
 [![Code Climate](https://codeclimate.com/github/LehaIvanov/project-lvl3-s19/badges/gpa.svg)](https://codeclimate.com/github/LehaIvanov/project-lvl3-s19)
